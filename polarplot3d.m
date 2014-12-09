@@ -1,4 +1,4 @@
-function [Xi,Yi,Zi] = polarplot3d(Zp,varargin)
+function [Xi,Yi,Zi,g] = polarplot3d(Zp,varargin)
 % POLARPLOT3D  Plot a 3D surface from polar coordinate data
 %   [Xi,Yi,Zi] = polarplot3d(Zp,varargin)
 % Input
