@@ -3,14 +3,18 @@ function simulation()
 function surface()
     lighting phong;
     material shiny;
-    lightangle(-45,30)
-    light('Position',[-10 20 10]);
-    axis([1 60 1 60 -2 8]);
+    lightangle(-90,90)
+    light('Position',[-1 2 1]);
+    axis([-1.2 1.2 -1.2 1.2 -0.5 0.5]);
+    grid off;
 end
 
 
-function newH=Wave(n,theta,rho,dt,c,k,H,oldH,fix,cont,connect)
+function [newH,newCent]=Wave(n,rho,theta,dt,c,k,H,oldH,Cent,fix,cont,connect)
     global Ekin Epot;
+    
+    % The original cartesian definition of this function we repurposed to
+    % calculate the polar discretized model.
          
     % DAMPED WAVE EQUATION:
     %
@@ -42,125 +46,44 @@ function newH=Wave(n,theta,rho,dt,c,k,H,oldH,fix,cont,connect)
     
     %   Apply these to the wave equation above we have:
     
-    potential = zeros(length(theta),length(rho));
-    velocity = zeros(length(theta),length(rho));
-    acceleration = zeros(length(theta),length(rho));
-    newH = zeros(length(theta),length(rho));
+    potential = zeros(length(rho),length(theta));
+    velocity = zeros(length(rho),length(theta));
+    acceleration = zeros(length(rho),length(theta));
+    newH = zeros(length(rho),length(theta));
     for t = 1:length(theta)
         for r = 1:length(rho)
             if t == 1 && r == 1
-                potential(t,r) = c^2*((H(t,r+1)-2*H(t,r)+H(mod(length(theta)/2+t-1,length(theta))+1,r))+((1./r)*(H(t,r+1)-H(t,r)))+((1./r.^2)*(H(t+1,r)-2*H(t,r)+H(length(theta),r))));
+                potential(r,t) = c^2*((H(r+1,t)-2*H(r,t)+Cent)+((1./r)*(H(r+1,t)-H(r,t)))+((1./r.^2)*(H(r,t+1)-2*H(r,t)+H(r,length(theta)))/(2*pi/length(theta))^2));
             elseif t == length(theta) && r == 1
-                potential(t,r) = c^2*((H(t,r+1)-2*H(t,r)+H(mod(length(theta)/2+t-1,length(theta))+1,r))+((1./r)*(H(t,r+1)-H(t,r)))+((1./r.^2)*(H(1,r)-2*H(t,r)+H(t-1,r))));
+                potential(r,t) = c^2*((H(r+1,t)-2*H(r,t)+Cent)+((1./r)*(H(r+1,t)-H(r,t)))+((1./r.^2)*(H(r,1)-2*H(r,t)+H(r,t-1))/(2*pi/length(theta))^2));
             
             elseif t == 1 && r == length(rho)
-                potential(t,r) = 0;
+                potential(r,t) = 0;
             elseif t == length(theta) && r == length(rho)
-                potential(t,r) = 0;
+                potential(r,t) = 0;
                 
             
             elseif t == 1
-                potential(t,r) = c^2*((H(t,r+1)-2*H(t,r)+H(t,r-1))+((1./r)*(H(t,r+1)-H(t,r)))+((1./r.^2)*(H(t+1,r)-2*H(t,r)+H(length(theta),r))));
+                potential(r,t) = c^2*((H(r+1,t)-2*H(r,t)+H(r-1,t))+((1./r)*(H(r+1,t)-H(r,t)))+((1./r.^2)*(H(r,t+1)-2*H(r,t)+H(r,length(theta)))/(2*pi/length(theta))^2));
             elseif t == length(theta)
-                potential(t,r) = c^2*((H(t,r+1)-2*H(t,r)+H(t,r-1))+((1./r)*(H(t,r+1)-H(t,r)))+((1./r.^2)*(H(1,r)-2*H(t,r)+H(t-1,r))));
+                potential(r,t) = c^2*((H(r+1,t)-2*H(r,t)+H(r-1,t))+((1./r)*(H(r+1,t)-H(r,t)))+((1./r.^2)*(H(r,1)-2*H(r,t)+H(r,t-1))/(2*pi/length(theta))^2));
                 
                 
             elseif r == 1
-                potential(t,r) = c^2*((H(t,r+1)-2*H(t,r)+H(mod(length(theta)/2+t-1,length(theta))+1,r))+((1./r)*(H(t,r+1)-H(t,r)))+((1./r.^2)*(H(t+1,r)-2*H(t,r)+H(t-1,r))));
+                potential(r,t) = c^2*((H(r+1,t)-2*H(r,t)+Cent)+((1./r)*(H(r+1,t)-H(r,t)))+((1./r.^2)*(H(r,t+1)-2*H(r,t)+H(r,t-1))/(2*pi/length(theta))^2));
                 
             elseif r == length(rho)
-                potential(t,r)=0;
+                potential(r,t)=0;
                 
             else
-                potential(t,r) = c^2*((H(t,r+1)-2*H(t,r)+H(t,r-1))+((1./r)*(H(t,r+1)-H(t,r)))+((1./r.^2)*(H(t+1,r)-2*H(t,r)+H(t-1,r))));
+                potential(r,t) = c^2*((H(r+1,t)-2*H(r,t)+H(r-1,t))+((1./r)*(H(r+1,t)-H(r,t)))+((1./r.^2)*(H(r,t+1)-2*H(r,t)+H(r,t-1))/(2*pi/length(theta))^2));
             end
-            velocity(t,r)=(H(t,r)-oldH(t,r))/dt;
-            acceleration(t,r)=-k*velocity(t,r)+potential(t,r);
-            newH(t,r)=acceleration(t,r)*dt^2-oldH(t,r)+2*H(t,r);
+            velocity(r,t)=(H(r,t)-oldH(r,t))/dt;
+            acceleration(r,t)=-k*velocity(r,t)+potential(r,t);
+            newH(r,t)=acceleration(r,t)*dt^2-oldH(r,t)+2*H(r,t);
         end
     end
-    
-    
-%     -c^2*((4*H(theta,rho)-H(theta+1,rho)-H(theta-1,rho)-H(theta,rho+1)-H(theta,rho-1))...
-%         +0.5*(4*H(theta,rho)-H(theta+1,rho+1)-H(theta+1,rho-1)-H(theta-1,rho+1)-H(theta-1,rho-1))); %  diagonal direction (opitonal)
-%     velocity(theta,rho)=(H(theta,rho)-oldH(theta,rho))/dt;
-%     acceleration(theta,rho)=-k*velocity(theta,rho)+potential(theta,rho); %  := (newH(i,j)-2*H(i,j)+oldH(i,j))/dt^2 as mentioned above
-    % therefor, the new height is:
-%     newH(theta,rho)=acceleration(theta,rho)*dt^2-oldH(theta,rho)+2*H(theta,rho);
-      
-    % Please take notice that this equation isn't applied for the elements
-    % along the edges and at the corners (Boundary Points / Randpunkte),
-    % that's why i and j are from 2 to n-1 instead of 1 to n.
-    
-    
-%     
-%     % BOUNDARY CONDITIONS:
-%     %
-%     %   Equations for boundary points.
-%     %   Keep in mind that elements along the edges have 5 neighbours
-%     %   instead of 8 and vertices only have 3.
-%     
-%     
-%     
-%     potential(n,rho)=-c^2*((3*H(n,rho)-H(n-1,rho)-H(n,rho+1)-H(n,rho-1))...
-%         +0.5*(2*H(n,rho)-H(n-1,rho+1)-H(n-1,rho-1)));
-%     potential(theta,n)=-c^2*((3*H(theta,n)-H(theta,n-1)-H(theta+1,n)-H(theta-1,n))...
-%         +0.5*(2*H(theta,n)-H(theta+1,n-1)-H(theta-1,n-1)));
-%     potential(1,rho)=-c^2*((3*H(1,rho)-H(2,rho)-H(1,rho+1)-H(1,rho-1))...
-%         +0.5*(2*H(1,rho)-H(2,rho+1)-H(2,rho-1)));
-%     potential(theta,1)=-c^2*((3*H(theta,1)-H(theta,2)-H(theta+1,1)-H(theta-1,1))...
-%         +0.5*(2*H(theta,1)-H(theta+1,2)-H(theta-1,2)));
-%     velocity(n,rho)=(H(n,rho)-oldH(n,rho))/dt;
-%     velocity(theta,n)=(H(theta,n)-oldH(theta,n))/dt;
-%     velocity(1,rho)=(H(1,rho)-oldH(1,rho))/dt;
-%     velocity(theta,1)=(H(theta,1)-oldH(theta,1))/dt;
-%     
-%                 % 4 corners:
-%     potential(1,1)=-c^2*((2*H(1,1)-H(2,1)-H(1,2))...
-%         +0.5*(H(1,1)-H(2,2)));
-%     potential(1,n)=-c^2*((2*H(1,n)-H(1,n-1)-H(2,n))...
-%         +0.5*(H(1,n)-H(2,n-1)));
-%     potential(n,1)=-c^2*((2*H(n,1)-H(n,2)-H(n-1,1))...
-%         +0.5*(H(n,1)-H(n-1,2)));
-%     potential(n,n)=-c^2*((2*H(n,n)-H(n-1,n)-H(n,n-1))...
-%         +0.5*(H(n,n)-H(n-1,n-1)));
-%     velocity(1,1)=(H(1,1)-oldH(1,1))/dt;
-%     velocity(1,n)=(H(1,n)-oldH(1,n))/dt;
-%     velocity(n,1)=(H(n,1)-oldH(n,1))/dt;
-%     velocity(n,n)=(H(n,n)-oldH(n,n))/dt;
-% 
-% 
-% 
-% %                       DEFAULT MODUS     
-% if(~fix && ~cont && ~connect)
-%     
-%     acceleration(n,rho)=-k*velocity(n,rho) +potential(n,rho);
-%     newH(n,rho)=acceleration(n,rho)*dt^2-oldH(n,rho)+2*H(n,rho);
-%     
-%     acceleration(theta,n)=-k*velocity(theta,n) +potential(theta,n);
-%     newH(theta,n)=acceleration(theta,n)*dt^2-oldH(theta,n)+2*H(theta,n);
-%     
-%     acceleration(1,rho)=-k*velocity(1,rho) +potential(1,rho);
-%     newH(1,rho)=acceleration(1,rho)*dt^2-oldH(1,rho)+2*H(1,rho);
-%     
-%     acceleration(theta,1)=-k*velocity(theta,1) +potential(theta,1);
-%     newH(theta,1)=acceleration(theta,1)*dt^2-oldH(theta,1)+2*H(theta,1);
-%     
-%     
-%                 % 4 corners:
-%     acceleration(1,1)=-k*velocity(1,1) +potential(1,1);
-%     newH(1,1)=acceleration(1,1)*dt^2-oldH(1,1)+2*H(1,1);
-%     
-%     acceleration(1,n)=-k*velocity(1,n) +potential(1,n);
-%     newH(1,n)=acceleration(1,n)*dt^2-oldH(1,n)+2*H(1,n);
-%     
-%     acceleration(n,1)=-k*velocity(n,1) +potential(n,1);
-%     newH(n,1)=acceleration(n,1)*dt^2-oldH(n,1)+2*H(n,1);
-%     
-%     acceleration(n,n)=-k*velocity(n,n) +potential(n,n);
-%     newH(n,n)=acceleration(n,n)*dt^2-oldH(n,n)+2*H(n,n);   
-%     
-% end
+    newCent=mean(newH(1,:));
 
     kin=velocity.^2;
     pot=-acceleration.*oldH;
@@ -169,37 +92,109 @@ function newH=Wave(n,theta,rho,dt,c,k,H,oldH,fix,cont,connect)
 end
 
     n = 60;
-    H=zeros(n,n);
-    H(1,:) = 1;
-    H(2,:) = 1;
+    m = 60;
+    H=zeros(n,m);
+    
+    % Radially Symmetric Gaussian Initial Condition
+%     sigma = 3;    % just an example value
+%     gSize = 3*sigma;  % cutoff point
+%     xNum = 0:gSize;
+%     H(1,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-1.^2 / (2*sigma^2)));
+%     H(2,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-2.^2 / (2*sigma^2)));
+%     H(3,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-3.^2 / (2*sigma^2)));
+%     H(4,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-4.^2 / (2*sigma^2)));
+%     H(5,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-5.^2 / (2*sigma^2)));
+%     H(6,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-6.^2 / (2*sigma^2)));
+%     H(7,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-7.^2 / (2*sigma^2)));
+%     H(8,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-8.^2 / (2*sigma^2)));
+%     H(9,:) = 6*(1 / (sigma * sqrt(2 * pi)) * exp(-9.^2 / (2*sigma^2)));
+
+    % A (mediocre) attempt at a non-centered smooth peak
+    H(25,30) = .5;
+    H(26,30) = .45;
+    H(27,30) = .35;
+    H(28,30) = .25;
+    H(29,30) = .15;
+    H(30,30) = .1;
+    H(31,30) = .075;
+    H(32,30) = .06;
+    H(33,30) = .05;
+    H(34,30) = .04;
+    H(35,30) = .03;
+    H(36,30) = .02;
+    H(37,30) = .01;
+    
+    H(24,30) = .45;
+    H(23,30) = .35;
+    H(22,30) = .25;
+    H(21,30) = .15;
+    H(20,30) = .1;
+    H(19,30) = .075;
+    H(18,30) = .06;
+    H(17,30) = .05;
+    H(16,30) = .04;
+    H(15,30) = .03;
+    H(14,30) = .02;
+    H(13,30) = .01;
+    
+    H(25,31) = .3;
+    H(25,32) = .1;
+    H(25,33) = .05;
+    H(25,34) = .01;
+    
+    H(25,29) = .3;
+    H(25,28) = .1;
+    H(25,27) = .05;
+    H(25,26) = .01;
+    
+    H(24,31) = .25;
+    H(24,32) = .125;
+    
+    H(23,31) = .125;
+    H(23,32) = .02;
+    
+    H(24,29) = .25;
+    H(24,28) = .125;
+    
+    H(23,29) = .125;
+    H(23,28) = .02;
+    
+    H(26,31) = .25;
+    H(26,32) = .125;
+    
+    H(27,31) = .125;
+    H(27,32) = .02;
+
+    H(26,29) = .25;
+    H(26,28) = .125;
+    
+    H(27,29) = .125;
+    H(27,28) = 0.02;
+
+    Cent = 0;
+    newCent=Cent;
     
     oldH=H;
     newH=H;
-    theta = 0:2*pi/(n-1):2*pi; 
+    theta = 0:2*pi/m:2*pi;
+    theta = theta(1:end-1);
     rho = 0:n-1;
-    [r,t] = meshgrid(rho,theta);
-    [x,y,v] = pol2cart(t,r,newH);
+    [rh,th] = meshgrid(rho,theta);
+    [x,y,v] = pol2cart(th,rh,newH);
     figure('color','white');
     [Xi,Yi,Zi,g] = polarplot3d(v);
-
-%     h=surf(x,y,v(2:n-1,2:n-1));
-%     surface();
-    
-
+    surface;
     while true
-%         run=get(handles.RUN_button,'value');
-%         if ~run
-%             break
-%         end
-        newH=Wave(n,theta,rho,0.05,1,0,H,oldH,0,0,0);
+        [newH,newCent]=Wave(n,rho,theta,0.05,15,.2,H,oldH,Cent,0,0,0);
                 % n,i,j,dt,c,k,H,oldH,fix,cont,connect
         
-        [x,y,v] = pol2cart(t,r,newH);
-                
-        set(g,'zdata',v);
+        [x,y,v] = pol2cart(th,rh,newH);
+        [Xi,Yi,Zi,g] = polarplot3d(v);
+        surface();
         pause(0.05);
         oldH=H;
         H=newH;
+        Cent = newCent;
     end
 
 

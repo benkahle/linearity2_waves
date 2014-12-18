@@ -428,11 +428,11 @@ switch p.plottype
    case 'meshc',   g = mesh(Xi,Yi,Zi,Ci);
                    addcontours(Xi,Yi,Zi,p.contourlines);
    case 'mesh',    g = mesh (Xi,Yi,Zi,Ci);
-   case 'surf',    g = surf (Xi,Yi,Zi,Ci);
-   case 'surfc',   g = surf (Xi,Yi,Zi,Ci);
+   case 'surf',    g = surf (Xi,Yi,Zi,Ci,'FaceColor','red','EdgeColor','none');
+   case 'surfc',   g = surf (Xi,Yi,Zi,Ci,'FaceColor','red','EdgeColor','none');
                    addcontours(Xi,Yi,Zi,p.contourlines);
-   case 'surfn',   g = surf (Xi,Yi,Zi,Ci,'LineStyle','none');
-   case 'surfcn',  g = surf (Xi,Yi,Zi,Ci,'LineStyle','none');
+   case 'surfn',   g = surf (Xi,Yi,Zi,Ci,'LineStyle','none','FaceColor', 'cyan','EdgeColor','none');
+   case 'surfcn',  g = surf (Xi,Yi,Zi,Ci,'LineStyle','none','FaceColor','red','EdgeColor','none');
                    addcontours(Xi,Yi,Zi,p.contourlines);
    case 'contour', g = contour(Xi,Yi,Zi,p.contourlines);
                    xlim(xlim*1.04); ylim(ylim*1.04);
